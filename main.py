@@ -1,73 +1,67 @@
+import os
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import List
-
-app = FastAPI()
-
-# Enable CORS for all origins
 from fastapi.middleware.cors import CORSMiddleware
-origins = ["*"]
+from pydantic import BaseModel
+from typing import List, Optional
+import uvicorn
+
+app = FastAPI(title="build me a bookmarks API with FastAPI", version="1.0.0")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
+    allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# In-memory storage
+class Bookmark(BaseModel):
+    id: Optional[int]
+    title: str
+    url: str
+
 bookmarks = {}
 
-class Bookmark(BaseModel):
-    id: int
-    title: str
-    url: str
+@app.get("/")
+def root():
+    return {"status": "ok", "service": "build me a bookmarks API with FastAPI", "docs": "/docs"}
 
-class BookmarkCreate(BaseModel):
-    title: str
-    url: str
-
-# GET /health endpoint
 @app.get("/health")
-def get_health():
+def health():
     return {"status": "healthy"}
 
-# GET / endpoint
-@app.get("/")
-def get_api_info():
-    return {"info": "Bookmarks API"}
-
-# GET /bookmarks endpoint
-@app.get("/bookmarks", response_model=List[Bookmark])
+@app.get("/bookmarks")
 def get_bookmarks():
     return list(bookmarks.values())
 
-# GET /bookmarks/{id} endpoint
-@app.get("/bookmarks/{id}", response_model=Bookmark)
-def get_bookmark(id: int):
-    if id not in bookmarks:
+@app.get("/bookmarks/{bookmark_id}")
+def get_bookmark(bookmark_id: int):
+    if bookmark_id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    return bookmarks[id]
+    return bookmarks[bookmark_id]
 
-# POST /bookmarks endpoint
-@app.post("/bookmarks", response_model=Bookmark)
-def create_bookmark(bookmark: BookmarkCreate):
-    new_id = max(bookmarks.keys(), default=0) + 1
-    bookmarks[new_id] = Bookmark(id=new_id, title=bookmark.title, url=bookmark.url)
-    return bookmarks[new_id]
+@app.post("/bookmarks", status_code=201)
+def create_bookmark(bookmark: Bookmark):
+    if bookmark.id in bookmarks:
+        raise HTTPException(status_code=422, detail="Bookmark with this id already exists")
+    bookmarks[bookmark.id] = bookmark
+    return bookmark
 
-# PUT /bookmarks/{id} endpoint
-@app.put("/bookmarks/{id}", response_model=Bookmark)
-def update_bookmark(id: int, bookmark: BookmarkCreate):
-    if id not in bookmarks:
+@app.put("/bookmarks/{bookmark_id}")
+def update_bookmark(bookmark_id: int, bookmark: Bookmark):
+    if bookmark_id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    bookmarks[id] = Bookmark(id=id, title=bookmark.title, url=bookmark.url)
-    return bookmarks[id]
+    if bookmark.id != bookmark_id:
+        raise HTTPException(status_code=422, detail="Bookmark id mismatch")
+    bookmarks[bookmark_id] = bookmark
+    return bookmark
 
-# DELETE /bookmarks/{id} endpoint
-@app.delete("/bookmarks/{id}")
-def delete_bookmark(id: int):
-    if id not in bookmarks:
+@app.delete("/bookmarks/{bookmark_id}")
+def delete_bookmark(bookmark_id: int):
+    if bookmark_id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    del bookmarks[id]
+    del bookmarks[bookmark_id]
     return {"message": "Bookmark deleted"}
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
