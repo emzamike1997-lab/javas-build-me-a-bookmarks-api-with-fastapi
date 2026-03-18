@@ -56,6 +56,6 @@ def delete_bookmark(bookmark_id: int):
     return {"error": "Bookmark not found"}
 
 if __name__ == "__main__":
-    print("🚀 FastAPI app starting...")
+    print(" FastAPI app starting...")
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
