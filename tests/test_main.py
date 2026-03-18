@@ -4,290 +4,216 @@
 # Import necessary libraries
 from fastapi.testclient import TestClient
 from main import app
-
-# Create a test client for the API
-client = TestClient(app)
-
-# Unit tests for the API
-def test_bookmarks_api_root():
-    """Test the root endpoint of the API"""
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.json() == {"message": "Bookmarks API"}
-
-def test_bookmarks_api_create_bookmark():
-    """Test creating a new bookmark"""
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    assert response.status_code == 201
-    assert response.json()["title"] == data["title"]
-    assert response.json()["url"] == data["url"]
-
-def test_bookmarks_api_get_bookmark():
-    """Test getting a bookmark by ID"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Get the bookmark by ID
-    response = client.get(f"/bookmarks/{bookmark_id}")
-    assert response.status_code == 200
-    assert response.json()["title"] == data["title"]
-    assert response.json()["url"] == data["url"]
-
-def test_bookmarks_api_update_bookmark():
-    """Test updating a bookmark"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Update the bookmark
-    new_data = {"title": "Updated Test Bookmark", "url": "https://example.com/new"}
-    response = client.put(f"/bookmarks/{bookmark_id}", json=new_data)
-    assert response.status_code == 200
-    assert response.json()["title"] == new_data["title"]
-    assert response.json()["url"] == new_data["url"]
-
-def test_bookmarks_api_delete_bookmark():
-    """Test deleting a bookmark"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Delete the bookmark
-    response = client.delete(f"/bookmarks/{bookmark_id}")
-    assert response.status_code == 200
-    assert response.json()["message"] == "Bookmark deleted"
-
-# Integration tests for the API
-def test_bookmarks_api_create_bookmark_integration():
-    """Test creating a new bookmark in an integration test"""
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    assert response.status_code == 201
-    assert response.json()["title"] == data["title"]
-    assert response.json()["url"] == data["url"]
-
-def test_bookmarks_api_get_bookmark_integration():
-    """Test getting a bookmark by ID in an integration test"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Get the bookmark by ID
-    response = client.get(f"/bookmarks/{bookmark_id}")
-    assert response.status_code == 200
-    assert response.json()["title"] == data["title"]
-    assert response.json()["url"] == data["url"]
-
-def test_bookmarks_api_update_bookmark_integration():
-    """Test updating a bookmark in an integration test"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Update the bookmark
-    new_data = {"title": "Updated Test Bookmark", "url": "https://example.com/new"}
-    response = client.put(f"/bookmarks/{bookmark_id}", json=new_data)
-    assert response.status_code == 200
-    assert response.json()["title"] == new_data["title"]
-    assert response.json()["url"] == new_data["url"]
-
-def test_bookmarks_api_delete_bookmark_integration():
-    """Test deleting a bookmark in an integration test"""
-    # Create a new bookmark
-    data = {"title": "Test Bookmark", "url": "https://example.com"}
-    response = client.post("/bookmarks", json=data)
-    bookmark_id = response.json()["id"]
-    # Delete the bookmark
-    response = client.delete(f"/bookmarks/{bookmark_id}")
-    assert response.status_code == 200
-    assert response.json()["message"] == "Bookmark deleted"
-```
-
-### === test_bookmarks_api_models.py ===
-
-```python
-# Import necessary libraries
-from main import Bookmark, BookmarkDB
-from pydantic import BaseModel
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-# Create a test database engine
-engine = create_engine("sqlite:///:memory:")
-Session = sessionmaker(bind=engine)
-
-# Define a test model for the Bookmark
-class TestBookmark(BaseModel):
-    title: str
-    url: str
-
-# Define a test model for the BookmarkDB
-class TestBookmarkDB(BookmarkDB):
-    def __init__(self, session):
-        self.session = session
-
-    def get_bookmark(self, id):
-        return self.session.query(Bookmark).get(id)
-
-    def create_bookmark(self, title, url):
-        bookmark = Bookmark(title=title, url=url)
-        self.session.add(bookmark)
-        self.session.commit()
-        return bookmark
-
-# Test the Bookmark model
-def test_bookmark_model():
-    """Test the Bookmark model"""
-    bookmark = TestBookmark(title="Test Bookmark", url="https://example.com")
-    assert bookmark.title == "Test Bookmark"
-    assert bookmark.url == "https://example.com"
-
-# Test the BookmarkDB model
-def test_bookmark_db_model():
-    """Test the BookmarkDB model"""
-    session = Session()
-    bookmark_db = TestBookmarkDB(session)
-    bookmark = bookmark_db.create_bookmark("Test Bookmark", "https://example.com")
-    assert bookmark.title == "Test Bookmark"
-    assert bookmark.url == "https://example.com"
-    session.close()
-```
-
-### === conftest.py ===
-
-```python
-# Import necessary libraries
 import pytest
-from main import app
-
-# Create a test client for the API
-@pytest.fixture
-def client():
-    """Create a test client for the API"""
-    yield TestClient(app)
-
-# Create a test database engine
-@pytest.fixture
-def db():
-    """Create a test database engine"""
-    engine = create_engine("sqlite:///:memory:")
-    Session = sessionmaker(bind=engine)
-    yield Session()
-    engine.dispose()
-
-# Create a test model for the Bookmark
-@pytest.fixture
-def bookmark_model():
-    """Create a test model for the Bookmark"""
-    yield TestBookmark
-
-# Create a test model for the BookmarkDB
-@pytest.fixture
-def bookmark_db_model(db):
-    """Create a test model for the BookmarkDB"""
-    yield TestBookmarkDB(db)
-```
-
-### === main.py ===
-
-```python
-# Import necessary libraries
-from fastapi import FastAPI
 from pydantic import BaseModel
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from typing import List
 
-# Define the API application
-app = FastAPI()
-
-# Define the Bookmark model
+# Define a Pydantic model for the Bookmark
 class Bookmark(BaseModel):
     id: int
     title: str
     url: str
 
-# Define the BookmarkDB model
-class BookmarkDB:
-    def __init__(self, session):
-        self.session = session
+# Define a client instance for the API
+client = TestClient(app)
 
-    def get_bookmark(self, id):
-        return self.session.query(Bookmark).get(id)
+# Unit tests
+def test_create_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    response = client.post("/bookmarks/", json=data)
+    assert response.status_code == 201
+    assert response.json()["title"] == data["title"]
+    assert response.json()["url"] == data["url"]
 
-    def create_bookmark(self, title, url):
-        bookmark = Bookmark(title=title, url=url)
-        self.session.add(bookmark)
-        self.session.commit()
-        return bookmark
+def test_get_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get the bookmark
+    response = client.get("/bookmarks/")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == data["title"]
+    assert response.json()[0]["url"] == data["url"]
 
-# Define the root endpoint of the API
-@app.get("/")
-async def read_root():
-    """Return a message indicating that the API is working"""
-    return {"message": "Bookmarks API"}
+def test_get_bookmark_by_id():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get the bookmark by ID
+    response = client.get("/bookmarks/1")
+    assert response.status_code == 200
+    assert response.json()["title"] == data["title"]
+    assert response.json()["url"] == data["url"]
 
-# Define the endpoint for creating a new bookmark
-@app.post("/bookmarks")
-async def create_bookmark(title: str, url: str):
-    """Create a new bookmark"""
-    session = create_engine("sqlite:///:memory:").connect()
-    session.execute("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY, title TEXT, url TEXT)")
-    session.close()
-    bookmark_db = BookmarkDB(session)
-    bookmark = bookmark_db.create_bookmark(title, url)
-    return {"id": bookmark.id, "title": bookmark.title, "url": bookmark.url}
+def test_update_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Update the bookmark
+    new_data = {"title": "Updated Bookmark", "url": "https://updated.com"}
+    response = client.put("/bookmarks/1", json=new_data)
+    assert response.status_code == 200
+    assert response.json()["title"] == new_data["title"]
+    assert response.json()["url"] == new_data["url"]
 
-# Define the endpoint for getting a bookmark by ID
-@app.get("/bookmarks/{id}")
-async def get_bookmark(id: int):
-    """Get a bookmark by ID"""
-    session = create_engine("sqlite:///:memory:").connect()
-    session.execute("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY, title TEXT, url TEXT)")
-    session.close()
-    bookmark_db = BookmarkDB(session)
-    bookmark = bookmark_db.get_bookmark(id)
-    if bookmark:
-        return {"id": bookmark.id, "title": bookmark.title, "url": bookmark.url}
-    else:
-        return {"message": "Bookmark not found"}
+def test_delete_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Delete the bookmark
+    response = client.delete("/bookmarks/1")
+    assert response.status_code == 200
 
-# Define the endpoint for updating a bookmark
-@app.put("/bookmarks/{id}")
-async def update_bookmark(id: int, title: str, url: str):
-    """Update a bookmark"""
-    session = create_engine("sqlite:///:memory:").connect()
-    session.execute("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY, title TEXT, url TEXT)")
-    session.close()
-    bookmark_db = BookmarkDB(session)
-    bookmark = bookmark_db.get_bookmark(id)
-    if bookmark:
-        bookmark.title = title
-        bookmark.url = url
-        session = create_engine("sqlite:///:memory:").connect()
-        session.execute("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY, title TEXT, url TEXT)")
-        session.close()
-        bookmark_db = BookmarkDB(session)
-        bookmark_db.session.add(bookmark)
-        bookmark_db.session.commit()
-        return {"id": bookmark.id, "title": bookmark.title, "url": bookmark.url}
-    else:
-        return {"message": "Bookmark not found"}
+# Integration tests
+def test_create_bookmark_with_invalid_data():
+    # Create a new bookmark with invalid data
+    data = {"title": "Test Bookmark"}
+    response = client.post("/bookmarks/", json=data)
+    assert response.status_code == 422
 
-# Define the endpoint for deleting a bookmark
-@app.delete("/bookmarks/{id}")
-async def delete_bookmark(id: int):
-    """Delete a bookmark"""
-    session = create_engine("sqlite:///:memory:").connect()
-    session.execute("CREATE TABLE bookmarks (id INTEGER PRIMARY KEY, title TEXT, url TEXT)")
-    session.close()
-    bookmark_db = BookmarkDB(session)
-    bookmark = bookmark_db.get_bookmark(id)
-    if bookmark:
-        bookmark_db.session.delete(bookmark)
-        bookmark_db.session.commit()
-        return {"message": "Bookmark deleted"}
-    else:
-        return {"message": "Bookmark not found"}
+def test_get_bookmark_by_non_existent_id():
+    # Get a bookmark by non-existent ID
+    response = client.get("/bookmarks/100")
+    assert response.status_code == 404
+
+def test_update_bookmark_with_invalid_data():
+    # Update a bookmark with invalid data
+    data = {"title": "Updated Bookmark"}
+    response = client.put("/bookmarks/1", json=data)
+    assert response.status_code == 422
+
+def test_delete_bookmark_with_invalid_id():
+    # Delete a bookmark with invalid ID
+    response = client.delete("/bookmarks/100")
+    assert response.status_code == 404
+```
+
+### === test_bookmarks_api_integration.py ===
+
+```python
+# Import necessary libraries
+from fastapi.testclient import TestClient
+from main import app
+import pytest
+from pydantic import BaseModel
+from typing import List
+
+# Define a Pydantic model for the Bookmark
+class Bookmark(BaseModel):
+    id: int
+    title: str
+    url: str
+
+# Define a client instance for the API
+client = TestClient(app)
+
+# Integration tests
+def test_create_bookmark_and_get_all_bookmarks():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get all bookmarks
+    response = client.get("/bookmarks/")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == data["title"]
+    assert response.json()[0]["url"] == data["url"]
+
+def test_create_bookmark_and_get_bookmark_by_id():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get the bookmark by ID
+    response = client.get("/bookmarks/1")
+    assert response.status_code == 200
+    assert response.json()["title"] == data["title"]
+    assert response.json()["url"] == data["url"]
+
+def test_create_bookmark_and_update_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Update the bookmark
+    new_data = {"title": "Updated Bookmark", "url": "https://updated.com"}
+    response = client.put("/bookmarks/1", json=new_data)
+    assert response.status_code == 200
+    assert response.json()["title"] == new_data["title"]
+    assert response.json()["url"] == new_data["url"]
+
+def test_create_bookmark_and_delete_bookmark():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Delete the bookmark
+    response = client.delete("/bookmarks/1")
+    assert response.status_code == 200
+```
+
+### === test_bookmarks_api_db.py ===
+
+```python
+# Import necessary libraries
+from fastapi.testclient import TestClient
+from main import app
+import pytest
+from pydantic import BaseModel
+from typing import List
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Define a Pydantic model for the Bookmark
+class Bookmark(BaseModel):
+    id: int
+    title: str
+    url: str
+
+# Define a client instance for the API
+client = TestClient(app)
+
+# Define a test database engine
+engine = create_engine("sqlite:///:memory:")
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Integration tests
+def test_create_bookmark_and_get_all_bookmarks_db():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get all bookmarks
+    response = client.get("/bookmarks/")
+    assert response.status_code == 200
+    assert len(response.json()) == 1
+    assert response.json()[0]["title"] == data["title"]
+    assert response.json()[0]["url"] == data["url"]
+
+def test_create_bookmark_and_get_bookmark_by_id_db():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Get the bookmark by ID
+    response = client.get("/bookmarks/1")
+    assert response.status_code == 200
+    assert response.json()["title"] == data["title"]
+    assert response.json()["url"] == data["url"]
+
+def test_create_bookmark_and_update_bookmark_db():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Update the bookmark
+    new_data = {"title": "Updated Bookmark", "url": "https://updated.com"}
+    response = client.put("/bookmarks/1", json=new_data)
+    assert response.status_code == 200
+    assert response.json()["title"] == new_data["title"]
+    assert response.json()["url"] == new_data["url"]
+
+def test_create_bookmark_and_delete_bookmark_db():
+    # Create a new bookmark
+    data = {"title": "Test Bookmark", "url": "https://example.com"}
+    client.post("/bookmarks/", json=data)
+    # Delete the bookmark
+    response = client.delete("/bookmarks/1")
+    assert response.status_code == 200
 ```
