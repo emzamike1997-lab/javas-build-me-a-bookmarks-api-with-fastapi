@@ -56,9 +56,13 @@ def create_bookmark(bookmark: Bookmark):
 def update_bookmark(bookmark_id: int, bookmark: BookmarkUpdate):
     if bookmark_id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    for key, value in bookmark.dict(exclude_unset=True).items():
-        bookmarks[bookmark_id][key] = value
-    return bookmarks[bookmark_id]
+    updated_bookmark = bookmarks[bookmark_id].copy()
+    if bookmark.title is not None:
+        updated_bookmark["title"] = bookmark.title
+    if bookmark.url is not None:
+        updated_bookmark["url"] = bookmark.url
+    bookmarks[bookmark_id] = updated_bookmark
+    return updated_bookmark
 
 @app.delete("/bookmarks/{bookmark_id}")
 def delete_bookmark(bookmark_id: int):
