@@ -1,2 +1,3 @@
-# javas-build-me-a-bookmarks-api-with-fastapi
-JAVAS: build me a bookmarks API with FastAPI
+# build me a bookmarks API with FastAPI
+FastAPI application deployed on Railway.
+Visit /docs for interactive API documentation.
