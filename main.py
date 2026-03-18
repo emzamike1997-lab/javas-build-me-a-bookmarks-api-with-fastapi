@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 
 app = FastAPI()
 
@@ -23,13 +23,9 @@ class Bookmark(BaseModel):
     title: str
     url: str
 
-class BookmarkCreate(BaseModel):
+class BookmarkRequest(BaseModel):
     title: str
     url: str
-
-class BookmarkUpdate(BaseModel):
-    title: Optional[str] = None
-    url: Optional[str] = None
 
 # GET /health endpoint
 @app.get("/health")
@@ -55,21 +51,20 @@ def get_bookmark(id: int):
 
 # POST /bookmarks endpoint
 @app.post("/bookmarks", response_model=Bookmark)
-def create_bookmark(bookmark: BookmarkCreate):
+def create_bookmark(request: BookmarkRequest):
     new_id = max(bookmarks.keys(), default=0) + 1
-    bookmarks[new_id] = Bookmark(id=new_id, title=bookmark.title, url=bookmark.url)
-    return bookmarks[new_id]
+    new_bookmark = Bookmark(id=new_id, title=request.title, url=request.url)
+    bookmarks[new_id] = new_bookmark
+    return new_bookmark
 
 # PUT /bookmarks/{id} endpoint
 @app.put("/bookmarks/{id}", response_model=Bookmark)
-def update_bookmark(id: int, bookmark: BookmarkUpdate):
+def update_bookmark(id: int, request: BookmarkRequest):
     if id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    if bookmark.title:
-        bookmarks[id].title = bookmark.title
-    if bookmark.url:
-        bookmarks[id].url = bookmark.url
-    return bookmarks[id]
+    updated_bookmark = Bookmark(id=id, title=request.title, url=request.url)
+    bookmarks[id] = updated_bookmark
+    return updated_bookmark
 
 # DELETE /bookmarks/{id} endpoint
 @app.delete("/bookmarks/{id}")
