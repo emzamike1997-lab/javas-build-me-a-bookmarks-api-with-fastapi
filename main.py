@@ -5,7 +5,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
 
-app = FastAPI(title="build me a bookmarks API with FastAPI", version="1.0.0")
+app = FastAPI(title="Bookmarks API with FastAPI", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -19,11 +19,15 @@ class Bookmark(BaseModel):
     title: str
     url: str
 
+class BookmarkUpdate(BaseModel):
+    title: Optional[str]
+    url: Optional[str]
+
 bookmarks = {}
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "build me a bookmarks API with FastAPI", "docs": "/docs"}
+    return {"status": "ok", "service": "Bookmarks API with FastAPI", "docs": "/docs"}
 
 @app.get("/health")
 def health():
@@ -39,21 +43,22 @@ def get_bookmark(bookmark_id: int):
         raise HTTPException(status_code=404, detail="Bookmark not found")
     return bookmarks[bookmark_id]
 
-@app.post("/bookmarks", status_code=201)
+@app.post("/bookmarks")
 def create_bookmark(bookmark: Bookmark):
-    if bookmark.id in bookmarks:
-        raise HTTPException(status_code=422, detail="Bookmark with this id already exists")
-    bookmarks[bookmark.id] = bookmark
-    return bookmark
+    if bookmark.id is not None and bookmark.id in bookmarks:
+        raise HTTPException(status_code=422, detail="Bookmark with this ID already exists")
+    new_id = max(bookmarks.keys(), default=-1) + 1
+    bookmarks[new_id] = bookmark.dict()
+    bookmarks[new_id]["id"] = new_id
+    return bookmarks[new_id], 201
 
 @app.put("/bookmarks/{bookmark_id}")
-def update_bookmark(bookmark_id: int, bookmark: Bookmark):
+def update_bookmark(bookmark_id: int, bookmark: BookmarkUpdate):
     if bookmark_id not in bookmarks:
         raise HTTPException(status_code=404, detail="Bookmark not found")
-    if bookmark.id != bookmark_id:
-        raise HTTPException(status_code=422, detail="Bookmark id mismatch")
-    bookmarks[bookmark_id] = bookmark
-    return bookmark
+    for key, value in bookmark.dict(exclude_unset=True).items():
+        bookmarks[bookmark_id][key] = value
+    return bookmarks[bookmark_id]
 
 @app.delete("/bookmarks/{bookmark_id}")
 def delete_bookmark(bookmark_id: int):
